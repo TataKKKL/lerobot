@@ -47,6 +47,23 @@ episodes: list[int] = [0]
 die_if_unbearable(episodes, list[int])
 dataset = LeRobotDataset(repo_id, episodes=episodes)
 
+# And see how many frames you have:
+print(f"Selected episodes: {dataset.episodes}")
+print(f"Number of episodes selected: {dataset.num_episodes}")
+print(f"Number of frames selected: {dataset.num_frames}")
+
+# Or simply load the entire dataset:
+full_dataset = LeRobotDataset(repo_id)
+print(f"Number of episodes selected: {full_dataset.num_episodes}")
+print(f"Number of frames selected: {full_dataset.num_frames}")
+
+# The previous metadata class is contained in the 'meta' attribute of the dataset:
+print(full_dataset.meta)
+
+# LeRobotDataset actually wraps an underlying Hugging Face dataset
+# (see https://huggingface.co/docs/datasets for more information).
+print(full_dataset.hf_dataset)
+
 print(len(dataset))
 i=0
 print(dataset[i]['task'])
