@@ -68,4 +68,20 @@ print(len(dataset))
 i=0
 print(dataset[i]['task'])
 
-# Push the T-shaped block onto the T-shaped target.
+
+'''
+LeRobotDatasetMetadata({
+    Repository ID: 'lerobot/aloha_sim_insertion_human',
+    Total episodes: '50',
+    Total frames: '25000',
+    Features: '['observation.images.top', 'observation.state', 'action', 'episode_index', 'frame_index', 'timestamp', 'next.done', 'index', 'task_index']',
+})',
+
+Dataset({
+    features: ['observation.state', 'action', 'episode_index', 'frame_index', 'timestamp', 'next.done', 'index', 'task_index'],
+    num_rows: 25000
+})
+500
+Insert the peg into the socket.
+'''
+

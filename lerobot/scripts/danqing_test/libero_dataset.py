@@ -18,7 +18,7 @@ dataset_idx:int = 5
 
 # repo_id:str = "lerobot/aloha_static_coffee_new" #available_datasets[dataset_idx]
 # repo_id:str =  available_datasets[dataset_idx]
-repo_id:str = "lerobot/pusht"
+repo_id:str = "IPEC-COMMUNITY/libero_object_no_noops_lerobot"
 
 print(repo_id)
 
@@ -68,19 +68,18 @@ print(len(dataset))
 i=0
 print(dataset[i]['task'])
 
-
 '''
 LeRobotDatasetMetadata({
-    Repository ID: 'lerobot/pusht',
-    Total episodes: '206',
-    Total frames: '25650',
-    Features: '['observation.image', 'observation.state', 'action', 'episode_index', 'frame_index', 'timestamp', 'next.reward', 'next.done', 'next.success', 'index', 'task_index']',
+    Repository ID: 'IPEC-COMMUNITY/libero_object_no_noops_lerobot',
+    Total episodes: '454',
+    Total frames: '66984',
+    Features: '['observation.images.image', 'observation.images.wrist_image', 'observation.state', 'action', 'timestamp', 'frame_index', 'episode_index', 'index', 'task_index']',
 })',
 
 Dataset({
-    features: ['observation.state', 'action', 'episode_index', 'frame_index', 'timestamp', 'next.reward', 'next.done', 'next.success', 'index', 'task_index'],
-    num_rows: 25650
+    features: ['observation.state', 'action', 'timestamp', 'frame_index', 'episode_index', 'index', 'task_index'],
+    num_rows: 66984
 })
-161
-Push the T-shaped block onto the T-shaped target.
+143
+pick up the orange juice and place it in the basket
 '''

@@ -18,7 +18,7 @@ dataset_idx:int = 5
 
 # repo_id:str = "lerobot/aloha_static_coffee_new" #available_datasets[dataset_idx]
 # repo_id:str =  available_datasets[dataset_idx]
-repo_id:str = "lerobot/pusht"
+repo_id:str = "DanqingZ/so100_test_6"
 
 print(repo_id)
 
@@ -70,17 +70,18 @@ print(dataset[i]['task'])
 
 
 '''
+Number of frames selected: 894
 LeRobotDatasetMetadata({
-    Repository ID: 'lerobot/pusht',
-    Total episodes: '206',
-    Total frames: '25650',
-    Features: '['observation.image', 'observation.state', 'action', 'episode_index', 'frame_index', 'timestamp', 'next.reward', 'next.done', 'next.success', 'index', 'task_index']',
+    Repository ID: 'DanqingZ/so100_test_6',
+    Total episodes: '2',
+    Total frames: '894',
+    Features: '['action', 'observation.state', 'observation.images.laptop', 'observation.images.phone', 'timestamp', 'frame_index', 'episode_index', 'index', 'task_index']',
 })',
 
 Dataset({
-    features: ['observation.state', 'action', 'episode_index', 'frame_index', 'timestamp', 'next.reward', 'next.done', 'next.success', 'index', 'task_index'],
-    num_rows: 25650
+    features: ['action', 'observation.state', 'timestamp', 'frame_index', 'episode_index', 'index', 'task_index'],
+    num_rows: 894
 })
-161
-Push the T-shaped block onto the T-shaped target.
+447
+Grasp a lego block and put it in the bin.
 '''
