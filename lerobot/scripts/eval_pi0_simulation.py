@@ -147,7 +147,9 @@ def rollout(
     check_env_attributes_and_types(env)
     while not np.all(done):
         # Numpy array to tensor and changing dictionary keys to LeRobot policy format.
+        import pdb; pdb.set_trace()
         observation = preprocess_observation(observation)
+        import pdb; pdb.set_trace()
         if return_observations:
             all_observations.append(deepcopy(observation))
 
@@ -481,7 +483,6 @@ def eval_main(cfg: EvalPipelineConfig):
         env_cfg=cfg.env,
     )
     policy.eval()
-    import pdb; pdb.set_trace()
 
     with torch.no_grad(), torch.autocast(device_type=device.type) if cfg.policy.use_amp else nullcontext():
         info = eval_policy(

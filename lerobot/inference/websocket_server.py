@@ -28,10 +28,11 @@ from lerobot.configs import parser
 class PolicyWebSocketServer:
     """WebSocket server that serves a policy for inference."""
     
-    def __init__(self, policy: PreTrainedPolicy, device: str = "cuda", 
+    def __init__(self, policy: PreTrainedPolicy, env, device: str = "cuda", 
                  max_size: int = 100 * 1024 * 1024,  # 100MB limit
                  compression_level: int = 6):
         self.policy = policy
+        self.env = env
         self.device = device
         self.max_size = max_size
         self.compression_level = compression_level
@@ -41,54 +42,52 @@ class PolicyWebSocketServer:
         """Handle incoming WebSocket connections."""
         logging.info(f"Client connected from {websocket.remote_address}")
         
-        try:
-            async for message in websocket:
-                try:
-                    # Parse the incoming message
-                    data = json.loads(message)
+        async for message in websocket:
+            # Parse the incoming message
+            data = json.loads(message)
+                
+            if data.get("type") == "select_action":
+                # Deserialize observation data
+
+                # Deserialize observation data to numpy arrays
+                observation = self._deserialize_observation(data["observation"])
+                
+                # Move observation to device and handle nested dicts
+                observation = self._move_observation_to_device(observation)
+                observation = preprocess_observation(observation)
+
+                device = self.device
+
+                observation = {
+                    key: observation[key].to(device, non_blocking=device.type == "cuda") for key in observation
+                }
+
+                env = self.env
+                observation = add_envs_task(env, observation)
+                
+                # Run inference
+                with torch.inference_mode():
+                    action = self.policy.select_action(observation)
+                
+                # Serialize and send response (convert to numpy first)
+                response = {
+                    "type": "action_response",
+                    "action": self._serialize_array(action.cpu().numpy())
+                }
+                
+                await websocket.send(json.dumps(response))
+                
+            elif data.get("type") == "reset":
+                # Reset the policy
+                self.policy.reset()
+                response = {"type": "reset_response", "status": "success"}
+                await websocket.send(json.dumps(response))
+                
+            elif data.get("type") == "ping":
+                # Health check
+                response = {"type": "pong"}
+                await websocket.send(json.dumps(response))
                     
-                    if data.get("type") == "select_action":
-                        # Deserialize observation data
-                        observation = self._deserialize_observation(data["observation"])
-                        
-                        # Move observation to device and handle nested dicts
-                        observation = self._move_observation_to_device(observation)
-                        
-                        # Run inference
-                        with torch.inference_mode():
-                            action = self.policy.select_action(observation)
-                        
-                        # Serialize and send response
-                        response = {
-                            "type": "action_response",
-                            "action": self._serialize_tensor(action.cpu())
-                        }
-                        
-                        await websocket.send(json.dumps(response))
-                        
-                    elif data.get("type") == "reset":
-                        # Reset the policy
-                        self.policy.reset()
-                        response = {"type": "reset_response", "status": "success"}
-                        await websocket.send(json.dumps(response))
-                        
-                    elif data.get("type") == "ping":
-                        # Health check
-                        response = {"type": "pong"}
-                        await websocket.send(json.dumps(response))
-                        
-                except Exception as e:
-                    logging.error(f"Error processing message: {e}")
-                    error_response = {
-                        "type": "error",
-                        "message": str(e)
-                    }
-                    await websocket.send(json.dumps(error_response))
-                    
-        except websockets.exceptions.ConnectionClosed:
-            logging.info(f"Client {websocket.remote_address} disconnected")
-        except Exception as e:
-            logging.error(f"Error in handle_client: {e}")
     
     def _move_observation_to_device(self, observation):
         """Recursively move observation tensors to device."""
@@ -124,12 +123,37 @@ class PolicyWebSocketServer:
         # Unpickle
         return pickle.loads(pickled_data)
     
+    def _serialize_array(self, array: np.ndarray) -> str:
+        """Serialize a numpy array to compressed base64 string."""
+        # Use pickle to serialize
+        pickled_data = pickle.dumps(array)
+        
+        # Compress the data
+        compressed_data = gzip.compress(pickled_data, compresslevel=self.compression_level)
+        
+        # Base64 encode
+        return base64.b64encode(compressed_data).decode('utf-8')
+    
+    def _deserialize_array(self, data: str) -> np.ndarray:
+        """Deserialize a numpy array from compressed base64 string."""
+        # Base64 decode
+        compressed_data = base64.b64decode(data.encode('utf-8'))
+        
+        # Decompress
+        pickled_data = gzip.decompress(compressed_data)
+        
+        # Unpickle
+        return pickle.loads(pickled_data)
+    
     def _serialize_observation(self, observation: Dict) -> Dict:
         """Serialize observation dictionary recursively."""
         result = {}
         for key, value in observation.items():
-            if isinstance(value, torch.Tensor):
-                result[key] = self._serialize_tensor(value)
+            if isinstance(value, (torch.Tensor, np.ndarray)):
+                # Convert tensor to numpy if needed, then serialize
+                if isinstance(value, torch.Tensor):
+                    value = value.cpu().numpy()
+                result[key] = self._serialize_array(value)
             elif isinstance(value, dict):
                 result[key] = self._serialize_observation(value)
             else:
@@ -141,8 +165,8 @@ class PolicyWebSocketServer:
         result = {}
         for key, value in data.items():
             if isinstance(value, str):
-                # Assume it's a serialized tensor
-                result[key] = self._deserialize_tensor(value)
+                # Assume it's a serialized numpy array
+                result[key] = self._deserialize_array(value)
             elif isinstance(value, dict):
                 result[key] = self._deserialize_observation(value)
             else:
@@ -182,6 +206,7 @@ def create_policy_server(cfg: EvalPipelineConfig) -> PolicyWebSocketServer:
     
     return PolicyWebSocketServer(
         policy, 
+        env,
         device,
         max_size=100 * 1024 * 1024,  # 100MB limit
         compression_level=6  # Good balance of speed vs compression

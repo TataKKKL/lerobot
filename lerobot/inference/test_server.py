@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Test script that exactly matches your server's observation structure.
+Test script that exactly matches your server's observation structure using numpy arrays.
 Use this to verify the WebSocket communication works with your real data.
 """
 
@@ -9,7 +9,7 @@ import json
 import pickle
 import base64
 import gzip
-import torch
+import numpy as np
 import websockets
 from collections import OrderedDict
 
@@ -18,14 +18,14 @@ class ExactStructureClient:
         self.uri = f"ws://{host}:{port}"
         self.compression_level = compression_level
     
-    def _serialize_tensor(self, tensor):
-        """Serialize a tensor to compressed base64 string."""
-        pickled_data = pickle.dumps(tensor)
+    def _serialize_array(self, array):
+        """Serialize a numpy array to compressed base64 string."""
+        pickled_data = pickle.dumps(array)
         compressed_data = gzip.compress(pickled_data, compresslevel=self.compression_level)
         return base64.b64encode(compressed_data).decode('utf-8')
     
-    def _deserialize_tensor(self, data):
-        """Deserialize a tensor from compressed base64 string."""
+    def _deserialize_array(self, data):
+        """Deserialize a numpy array from compressed base64 string."""
         compressed_data = base64.b64decode(data.encode('utf-8'))
         pickled_data = gzip.decompress(compressed_data)
         return pickle.loads(pickled_data)
@@ -34,32 +34,32 @@ class ExactStructureClient:
         """Serialize observation dictionary recursively."""
         result = {}
         for key, value in obs.items():
-            if isinstance(value, torch.Tensor):
-                result[key] = self._serialize_tensor(value)
+            if isinstance(value, np.ndarray):
+                result[key] = self._serialize_array(value)
             elif isinstance(value, dict):
-                result[key] = {k: self._serialize_tensor(v) for k, v in value.items()}
+                result[key] = {k: self._serialize_array(v) for k, v in value.items()}
             else:
                 result[key] = value
         return result
 
 def create_exact_observation():
-    """Create observation with exact structure from your server."""
+    """Create observation with exact structure from your server using numpy arrays."""
     # Using OrderedDict to match your server exactly
     observation = OrderedDict()
     
     # agent_pos: shape (1, 14)
-    observation['agent_pos'] = torch.randn(1, 14)
+    observation['agent_pos'] = np.random.randn(1, 14).astype(np.float32)
     
     # pixels: nested dict with 'top' key, shape (1, 480, 640, 3)
     observation['pixels'] = {
-        'top': torch.randint(0, 256, (1, 480, 640, 3), dtype=torch.uint8)
+        'top': np.random.randint(0, 256, (1, 480, 640, 3), dtype=np.uint8)
     }
     
     return observation
 
 async def test_exact_structure():
     """Test with the exact observation structure from your server."""
-    print("🎯 Testing with EXACT server observation structure...")
+    print("🎯 Testing with EXACT server observation structure (numpy arrays)...")
     print("=" * 60)
     
     client = ExactStructureClient()
@@ -71,13 +71,14 @@ async def test_exact_structure():
     print(f"   Type: {type(observation)}")
     print(f"   Keys: {list(observation.keys())}")
     print(f"   agent_pos shape: {observation['agent_pos'].shape}")
+    print(f"   agent_pos dtype: {observation['agent_pos'].dtype}")
     print(f"   pixels keys: {list(observation['pixels'].keys())}")
     print(f"   pixels['top'] shape: {observation['pixels']['top'].shape}")
     print(f"   pixels['top'] dtype: {observation['pixels']['top'].dtype}")
     
     # Calculate data sizes
-    agent_size = observation['agent_pos'].numel() * observation['agent_pos'].element_size()
-    pixel_size = observation['pixels']['top'].numel() * observation['pixels']['top'].element_size()
+    agent_size = observation['agent_pos'].nbytes
+    pixel_size = observation['pixels']['top'].nbytes
     total_raw_size = agent_size + pixel_size
     
     print(f"\n📏 Data sizes:")
@@ -142,7 +143,7 @@ async def test_exact_structure():
             data = json.loads(response)
             
             if data.get("type") == "action_response":
-                action = client._deserialize_tensor(data["action"])
+                action = client._deserialize_array(data["action"])
                 print(f"✅ SUCCESS! Received action from server!")
                 print(f"   📈 Action shape: {action.shape}")
                 print(f"   📊 Action dtype: {action.dtype}")
@@ -190,8 +191,7 @@ async def benchmark_compression():
         compressed_size = len(message_str.encode('utf-8'))
         
         # Calculate raw size
-        raw_size = (observation['agent_pos'].numel() * observation['agent_pos'].element_size() +
-                   observation['pixels']['top'].numel() * observation['pixels']['top'].element_size())
+        raw_size = observation['agent_pos'].nbytes + observation['pixels']['top'].nbytes
         
         ratio = raw_size / compressed_size
         
@@ -200,12 +200,12 @@ async def benchmark_compression():
     print(f"\n💡 Recommendation: Use level 6 for good balance of speed vs compression")
 
 if __name__ == "__main__":
-    print("🧪 LeRobot WebSocket - Exact Structure Test")
+    print("🧪 LeRobot WebSocket - Exact Structure Test (NumPy)")
     print("=" * 50)
     print("This test uses the EXACT observation structure from your server:")
     print("- OrderedDict with keys ['agent_pos', 'pixels']")
-    print("- agent_pos: torch.Tensor shape (1, 14)")
-    print("- pixels['top']: torch.Tensor shape (1, 480, 640, 3), dtype=uint8")
+    print("- agent_pos: numpy.ndarray shape (1, 14), dtype=float32")
+    print("- pixels['top']: numpy.ndarray shape (1, 480, 640, 3), dtype=uint8")
     print()
     
     async def run_all_tests():
