@@ -79,6 +79,19 @@ from lerobot.common.utils.utils import (
 )
 from lerobot.configs import parser
 from lerobot.configs.eval import EvalPipelineConfig
+from lerobot.inference.sync_lerobot_client import SyncLeRobotClient
+import numpy as np
+from collections import OrderedDict
+
+# def create_sample_observation():
+#     """Create sample observation (replace with your actual observation)"""
+#     observation = OrderedDict()
+#     observation['agent_pos'] = np.random.randn(1, 14).astype(np.float32)
+#     observation['pixels'] = {
+#         'top': np.random.randint(0, 256, (1, 480, 640, 3), dtype=np.uint8)
+#     }
+#     return observation
+
 
 
 def rollout(
@@ -147,9 +160,30 @@ def rollout(
     check_env_attributes_and_types(env)
     while not np.all(done):
         # Numpy array to tensor and changing dictionary keys to LeRobot policy format.
-        import pdb; pdb.set_trace()
+        # test
+        with SyncLeRobotClient() as client:
+            
+            # # Reset environment
+            # client.reset()
+            # print("✅ Environment reset")
+            
+            # Get action from observation
+            # observation = create_sample_observation()
+            action = client.select_action(observation)
+            # print(f"✅ Received action: shape={action.shape}")
+            # print(f"   Action range: [{action.min():.3f}, {action.max():.3f}]")
+            # print(f"   Action: {action}")
+            
+            # # You can call select_action multiple times
+            # for i in range(3):
+            #     # Update your observation here...
+            #     observation = create_sample_observation()  # Replace with real observation
+            #     action = client.select_action(observation)
+            #     print(f"   Step {i+1}: action shape {action.shape}")
+            #     print(f"   Action: {action}")
+
+
         observation = preprocess_observation(observation)
-        import pdb; pdb.set_trace()
         if return_observations:
             all_observations.append(deepcopy(observation))
 
@@ -162,17 +196,17 @@ def rollout(
         observation = add_envs_task(env, observation)
 
         with torch.inference_mode():
-            action = policy.select_action(observation)
+            action2 = policy.select_action(observation)
 
         # Convert to CPU / numpy.
-        action = action.to("cpu").numpy()
-        assert action.ndim == 2, "Action dimensions should be (batch, action_dim)"
+        action2 = action2.to("cpu").numpy()
+        assert action2.ndim == 2, "Action dimensions should be (batch, action_dim)"
+        print(f"   Action: {action}, Action2: {action2}")
 
         # Apply the next action.
         observation, reward, terminated, truncated, info = env.step(action)
         if render_callback is not None:
             render_callback(env)
-        import pdb; pdb.set_trace()
 
         # VectorEnv stores is_success in `info["final_info"][env_index]["is_success"]`. "final_info" isn't
         # available of none of the envs finished.
