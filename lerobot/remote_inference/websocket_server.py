@@ -215,7 +215,7 @@ def create_policy_server(cfg: EvalPipelineConfig) -> PolicyWebSocketServer:
 async def main():
     """Run the server."""
     server = create_policy_server()
-    await server.start_server('localhost', 8765)
+    await server.start_server('0.0.0.0', 8765)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

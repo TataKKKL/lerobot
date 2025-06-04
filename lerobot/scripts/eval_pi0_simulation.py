@@ -162,48 +162,8 @@ def rollout(
         # Numpy array to tensor and changing dictionary keys to LeRobot policy format.
         # test
         with SyncLeRobotClient() as client:
-            
-            # # Reset environment
-            # client.reset()
-            # print("✅ Environment reset")
-            
-            # Get action from observation
-            # observation = create_sample_observation()
             action = client.select_action(observation)
-            # print(f"✅ Received action: shape={action.shape}")
-            # print(f"   Action range: [{action.min():.3f}, {action.max():.3f}]")
-            # print(f"   Action: {action}")
-            
-            # # You can call select_action multiple times
-            # for i in range(3):
-            #     # Update your observation here...
-            #     observation = create_sample_observation()  # Replace with real observation
-            #     action = client.select_action(observation)
-            #     print(f"   Step {i+1}: action shape {action.shape}")
-            #     print(f"   Action: {action}")
 
-
-        observation = preprocess_observation(observation)
-        if return_observations:
-            all_observations.append(deepcopy(observation))
-
-        observation = {
-            key: observation[key].to(device, non_blocking=device.type == "cuda") for key in observation
-        }
-
-        # Infer "task" from attributes of environments.
-        # TODO: works with SyncVectorEnv but not AsyncVectorEnv
-        observation = add_envs_task(env, observation)
-
-        with torch.inference_mode():
-            action2 = policy.select_action(observation)
-
-        # Convert to CPU / numpy.
-        action2 = action2.to("cpu").numpy()
-        assert action2.ndim == 2, "Action dimensions should be (batch, action_dim)"
-        print(f"   Action: {action}, Action2: {action2}")
-
-        # Apply the next action.
         observation, reward, terminated, truncated, info = env.step(action)
         if render_callback is not None:
             render_callback(env)
