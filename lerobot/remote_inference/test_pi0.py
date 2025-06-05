@@ -53,50 +53,50 @@ def create_sample_observation_soarm100(format: Literal['numpy', 'tensor'] = 'ten
     return observation
 
 
-def local_inference_test(num_iterations: int = 100, device: str = "cuda"):
-    print(f"🏠 Local Inference Test ({device})")
-    print("-" * 40)
-    policy = ACTPolicy.from_pretrained("DanqingZ/act_so100_filtered_yellow_cuboid")
-    policy.to(device)
-    policy.eval()
+# def local_inference_test(num_iterations: int = 100, device: str = "cuda"):
+#     print(f"🏠 Local Inference Test ({device})")
+#     print("-" * 40)
+#     policy = ACTPolicy.from_pretrained("DanqingZ/act_so100_filtered_yellow_cuboid")
+#     policy.to(device)
+#     policy.eval()
 
-    print("Warming up...")
-    for _ in range(5):
-        observation = create_sample_observation_soarm100(format='tensor', device=device)
-        observation = convert_observation(observation, device)
-        with torch.inference_mode():
-            _ = policy.select_action(observation)
+#     print("Warming up...")
+#     for _ in range(5):
+#         observation = create_sample_observation_soarm100(format='tensor', device=device)
+#         observation = convert_observation(observation, device)
+#         with torch.inference_mode():
+#             _ = policy.select_action(observation)
 
-    print(f"Running {num_iterations} iterations...")
-    start_time = time.time()
-    for _ in range(num_iterations):
-        print('Iteration Start Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S"))
+#     print(f"Running {num_iterations} iterations...")
+#     start_time = time.time()
+#     for _ in range(num_iterations):
+#         print('Iteration Start Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S"))
 
-        observation = create_sample_observation_soarm100(format='tensor', device=device)
-        observation = convert_observation(observation, device)
+#         observation = create_sample_observation_soarm100(format='tensor', device=device)
+#         observation = convert_observation(observation, device)
 
-        with torch.inference_mode():
-            action = policy.select_action(observation)
-        print('Get Result Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S"))
-    end_time = time.time()
+#         with torch.inference_mode():
+#             action = policy.select_action(observation)
+#         print('Get Result Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S"))
+#     end_time = time.time()
 
-    total_time = end_time - start_time
-    avg_time = total_time / num_iterations
-    fps = num_iterations / total_time
+#     total_time = end_time - start_time
+#     avg_time = total_time / num_iterations
+#     fps = num_iterations / total_time
 
-    print(f"✅ Local inference completed:")
-    print(f"   Total time: {total_time:.3f}s")
-    print(f"   Average time per inference: {avg_time*1000:.1f}ms")
-    print(f"   FPS: {fps:.1f}")
-    print(f"   Action shape: {action.shape}")
-    return total_time, avg_time, fps
+#     print(f"✅ Local inference completed:")
+#     print(f"   Total time: {total_time:.3f}s")
+#     print(f"   Average time per inference: {avg_time*1000:.1f}ms")
+#     print(f"   FPS: {fps:.1f}")
+#     print(f"   Action shape: {action.shape}")
+#     return total_time, avg_time, fps
 
-'''
-(Pdb) observation['observation.state'].shape
-torch.Size([1, 6])
-(Pdb) observation['observation.images.on_robot'].shape
-torch.Size([1, 3, 480, 640])
-'''
+# '''
+# (Pdb) observation['observation.state'].shape
+# torch.Size([1, 6])
+# (Pdb) observation['observation.images.on_robot'].shape
+# torch.Size([1, 3, 480, 640])
+# '''
 
 async def remote_inference_test(num_iterations: int = 100):
     print(f"🌐 Remote Inference Test (WebSocket + MessagePack)")
@@ -120,6 +120,7 @@ async def remote_inference_test(num_iterations: int = 100):
                     # observation[name] = observation[name].unsqueeze(0)
                     observation[name] = observation[name].numpy()
                     print(name, observation[name].shape)
+                observation["task"] = ["Grasp the yellow cuboid and put it in the bin."]
                 _ = await client.select_action(observation)
 
             print(f"Running {num_iterations} iterations...")
@@ -133,6 +134,7 @@ async def remote_inference_test(num_iterations: int = 100):
                     # observation[name] = observation[name].unsqueeze(0)
                     observation[name] = observation[name].numpy()
                     print(name, observation[name].shape)
+                observation["task"] = ["Grasp the yellow cuboid and put it in the bin."]
                 print('Iteration Start Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S.%f")[:-3])
                 action = await client.select_action(observation)
                 print('Get Result Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S.%f")[:-3])
@@ -156,39 +158,39 @@ async def remote_inference_test(num_iterations: int = 100):
         return None, None, None
 
 
-async def compare_inference_methods(num_iterations: int = 100):
-    print("🔬 Performance Comparison")
-    print("=" * 50)
-    print()
-    local_total, local_avg, local_fps = local_inference_test(num_iterations)
-    print()
-    remote_total, remote_avg, remote_fps = await remote_inference_test(num_iterations)
-    print()
-    if remote_total is not None:
-        print("📊 Comparison Results:")
-        print("-" * 25)
-        overhead = (remote_avg - local_avg) * 1000
-        slowdown = remote_avg / local_avg
-        print(f"Local avg:     {local_avg*1000:.1f}ms ({local_fps:.1f} FPS)")
-        print(f"Remote avg:    {remote_avg*1000:.1f}ms ({remote_fps:.1f} FPS)")
-        print(f"Overhead:      +{overhead:.1f}ms per call")
-        print(f"Slowdown:      {slowdown:.1f}x slower")
-        obs = create_sample_observation_soarm100(format='numpy')
-        total_data_mb = sum(val.nbytes for val in obs.values()) / (1024 * 1024)
-        print(f"📦 Data Transfer per call:")
-        print(f"   Observation size: ~{total_data_mb:.1f}MB")
-        print(f"   Est. bandwidth: ~{total_data_mb * remote_fps:.1f}MB/s @ {remote_fps:.1f} FPS")
-        print()
-        print("💡 Recommendations:")
-        if overhead < 50:
-            print("   ✅ Low latency - suitable for real-time control")
-        elif overhead < 100:
-            print("   ⚠️  Medium latency - acceptable for most robotics tasks")
-        else:
-            print("   ❌ High latency - consider local inference for real-time tasks")
-    print()
-    print("🏁 Test completed!")
+# async def compare_inference_methods(num_iterations: int = 100):
+#     print("🔬 Performance Comparison")
+#     print("=" * 50)
+#     print()
+#     local_total, local_avg, local_fps = local_inference_test(num_iterations)
+#     print()
+#     remote_total, remote_avg, remote_fps = await remote_inference_test(num_iterations)
+#     print()
+#     if remote_total is not None:
+#         print("📊 Comparison Results:")
+#         print("-" * 25)
+#         overhead = (remote_avg - local_avg) * 1000
+#         slowdown = remote_avg / local_avg
+#         print(f"Local avg:     {local_avg*1000:.1f}ms ({local_fps:.1f} FPS)")
+#         print(f"Remote avg:    {remote_avg*1000:.1f}ms ({remote_fps:.1f} FPS)")
+#         print(f"Overhead:      +{overhead:.1f}ms per call")
+#         print(f"Slowdown:      {slowdown:.1f}x slower")
+#         obs = create_sample_observation_soarm100(format='numpy')
+#         total_data_mb = sum(val.nbytes for val in obs.values()) / (1024 * 1024)
+#         print(f"📦 Data Transfer per call:")
+#         print(f"   Observation size: ~{total_data_mb:.1f}MB")
+#         print(f"   Est. bandwidth: ~{total_data_mb * remote_fps:.1f}MB/s @ {remote_fps:.1f} FPS")
+#         print()
+#         print("💡 Recommendations:")
+#         if overhead < 50:
+#             print("   ✅ Low latency - suitable for real-time control")
+#         elif overhead < 100:
+#             print("   ⚠️  Medium latency - acceptable for most robotics tasks")
+#         else:
+#             print("   ❌ High latency - consider local inference for real-time tasks")
+#     print()
+#     print("🏁 Test completed!")
 
 
 if __name__ == "__main__":
-    asyncio.run(compare_inference_methods(num_iterations=100))
+    asyncio.run(remote_inference_test(num_iterations=100))

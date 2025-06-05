@@ -44,7 +44,9 @@ class PolicyWebSocketServer:
         
         async for message in websocket:
             # Parse the incoming message
+            print('Receive Message Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S.%f")[:-3])
             data = json.loads(message)
+            print('Send Message Time:', datetime.now().strftime("%A, %B %d, %Y at %H:%M:%S.%f")[:-3])
                 
             if data.get("type") == "select_action":
                 # Deserialize observation data

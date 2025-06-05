@@ -11,7 +11,16 @@ from lerobot.common.policies.pretrained import PreTrainedPolicy
 from lerobot.common.policies.act.modeling_act import ACTPolicy
 from msgpack_utils import packb, unpackb
 from datetime import datetime
-
+from lerobot.common.policies.pretrained import PreTrainedPolicy
+from lerobot.common.policies.act.modeling_act import ACTPolicy
+from lerobot.common.policies.pi0.modeling_pi0 import PI0Policy
+import numpy as np
+import torch
+from collections import OrderedDict
+from typing import Literal
+from lerobot_client import LeRobotClient
+from lerobot.common.policies.act.modeling_act import ACTPolicy
+from datetime import datetime
 
 def convert_observation(observation, device):
     flat_observation = {}
@@ -107,7 +116,8 @@ def create_policy_server() -> PolicyWebSocketServer:
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
     
-    policy = ACTPolicy.from_pretrained("DanqingZ/act_so100_filtered_yellow_cuboid")
+    # policy = ACTPolicy.from_pretrained("DanqingZ/act_so100_filtered_yellow_cuboid")
+    policy = PI0Policy.from_pretrained("DanqingZ/pi0_so100_test_yellow_cuboid_2_20250603_102352")
     policy.to(device)
     
     return PolicyWebSocketServer(policy, device, max_size=100 * 1024 * 1024)

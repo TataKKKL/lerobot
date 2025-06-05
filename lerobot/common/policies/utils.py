@@ -18,10 +18,14 @@ import torch
 from torch import nn
 
 
-def populate_queues(queues, batch):
+def populate_queues(queues, batch, exclude_keys=None):
+    if exclude_keys is None:
+        exclude_keys = []
     for key in batch:
         # Ignore keys not in the queues already (leaving the responsibility to the caller to make sure the
         # queues have the keys they want).
+        if key in exclude_keys:
+            continue
         if key not in queues:
             continue
         if len(queues[key]) != queues[key].maxlen:
