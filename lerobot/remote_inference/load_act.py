@@ -10,7 +10,7 @@ from lerobot.common.policies.act.modeling_act import ACTPolicy
 from datetime import datetime
 
 
-policy = PI0Policy.from_pretrained("DanqingZ/pi0_so100_test_yellow_cuboid_2_20250603_102352")
+policy = ACTPolicy.from_pretrained("DanqingZ/act_so100_filtered_yellow_cuboid")
 
 print(policy.config.input_features)
 num_learnable_params = sum(p.numel() for p in policy.parameters() if p.requires_grad)
@@ -50,6 +50,3 @@ for i in range(100):
     duration_ms = duration * 1000
     print(f"Time taken to select action: {duration_ms} ms")
     print(action)
-
-
-
